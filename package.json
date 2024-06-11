@@ -1,0 +1,38 @@
+{
+  "name": "jsonjsdocconverter",
+  "version": "1.0.3",
+  "description": "",
+  "main": "extension.js",
+  "keywords": [],
+  "author": "sirionis",
+  "license": "ISC",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.generateJSDoc",
+        "title": "Generate JSDoc from JSON"
+      },
+      {
+        "command": "extension.GenerateClassFromJSDoc",
+        "title": "Generate Class From JSDoc"
+      },
+      {
+        "command": "extension.updateIntelliSense",
+        "title": "Update V8 IntelliSense"
+      }
+    ]
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "activationEvents": [
+    "onCommand:extension.generateJSDoc"
+  ],
+  "devDependencies": {
+    "@types/vscode": "^1.75.0"
+  },
+  "scripts": {},
+  "dependencies": {
+    "axios": "^1.6.8"
+  }
+}

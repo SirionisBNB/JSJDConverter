@@ -1,12 +1,12 @@
 {
-  "name": "jsonjsdocconverter",
+  "name": "JSJDConverter",
   "version": "1.0.3",
   "description": "JSDoc converter for javascript",
   "repository": {
     "type": "git",
     "url": "git@github.com:Sirionis/JSJDConverter.git"
   },
-  "main": "extension.js",
+  "main": "./out/extension.js",
   "keywords": [],
   "author": "sirionis",
   "license": "MIT",
@@ -24,7 +24,33 @@
         "command": "extension.updateIntelliSense",
         "title": "Update V8 IntelliSense"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "JSJDConverter Configuration",
+      "properties": {
+        "JSJDConverter.serverAddress": {
+          "type": "string",
+          "default": "",
+          "description": "The address of the server."
+        },
+        "JSJDConverter.serverPort": {
+          "type": "number",
+          "default": 7200,
+          "description": "The port of the server."
+        },
+        "JSJDConverter.token": {
+          "type": "string",
+          "default": "",
+          "description": "The authentication token."
+        },
+        "JSJDConverter.who": {
+          "type": "string",
+          "default": "",
+          "description": "The identifier for the user."
+        }
+      }
+    }
   },
   "engines": {
     "vscode": "^1.75.0"
@@ -33,9 +59,17 @@
     "onCommand:extension.generateJSDoc"
   ],
   "devDependencies": {
-    "@types/vscode": "^1.75.0"
+    "@types/node": "^16.18.98",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^4.9.5",
+    "vsce": "^1.83.0"
   },
-  "scripts": {},
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
   "dependencies": {
     "axios": "^1.6.8"
   }

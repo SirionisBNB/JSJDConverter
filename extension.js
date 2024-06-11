@@ -16,19 +16,33 @@ function getKindFromString(kindString)
     }
 }
 
-class MyHoverProvider
+class HoverProvider
 {
     provideHover(document, position, token)
     {
         const range = document.getWordRangeAtPosition(position);
         const word = document.getText(range);
 
-        // Создайте объект Hover с MarkdownString содержащим подпись функции или метода
-        const hoverContents = new vscode.MarkdownString();
-        hoverContents.appendCodeblock(`function ${word}(args) {\n  // ...code\n}`, "javascript");
-        hoverContents.appendMarkdown("\n**Description:** Here is more detailed information about the function.");
+        if (hoverData.has(word)) {
+            const element = hoverData.get(word);
+            const hoverContents = new vscode.MarkdownString();
 
-        return new vscode.Hover(hoverContents, range);
+            hoverContents.appendMarkdown(`### ${element.label}`);
+            hoverContents.appendMarkdown(`**Type:** ${element.kind}`);
+            if (element.detail) {
+                hoverContents.appendMarkdown(`**Detail:** ${element.detail}`);
+            }
+            if (element.documentation) {
+                hoverContents.appendMarkdown(`**Description:** ${element.documentation}`);
+            }
+            if (element.example) {
+                hoverContents.appendCodeblock(element.example, "javascript");
+            }
+
+            return new vscode.Hover(hoverContents, range);
+        }
+
+        return null;  // Возвращаем null для стандартных функций, чтобы они обрабатывались обычным образом
     }
 }
 
@@ -53,7 +67,7 @@ class DynamicCompletionItemProvider
                 let markdownDocumentation = new vscode.MarkdownString();
                 markdownDocumentation.appendText(element.documentation || 'Documentation not provided');
                 markdownDocumentation.appendCodeblock("function example(arg) {\n  // ...code\n}", "javascript");
-                markdownDocumentation.appendMarkdown("**Description:** Here is more detailed information about the function.");
+                markdownDocumentation.appendMarkdown(`**Description:** ${element.documentation}`);
                 item.documentation = markdownDocumentation;
                 item.detail = element.detail || 'Function defined in V8 context';
                 item.insertText = new vscode.SnippetString(element.insertText);
@@ -116,11 +130,6 @@ function activate(context)
         }
     });
 
-    context.subscriptions.push(classDisposable);
-    context.subscriptions.push(disposable);
-
-
-
     const completionProvider = new DynamicCompletionItemProvider();
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', completionProvider));
     const updateIntelliSenseCommand = 'extension.updateIntelliSense';
@@ -142,8 +151,11 @@ function activate(context)
     });
 
     context.subscriptions.push(updateIntelliSenseDisposable);
+    context.subscriptions.push(classDisposable);
+    context.subscriptions.push(disposable);
 
-    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', new MyHoverProvider()));
+
+    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', new HoverProvider()));
 }
 
 function deactivate() { }

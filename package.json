@@ -1,11 +1,15 @@
 {
   "name": "jsonjsdocconverter",
   "version": "1.0.3",
-  "description": "",
+  "description": "JSDoc converter for javascript",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Sirionis/JSJDConverter.git"
+  },
   "main": "extension.js",
   "keywords": [],
   "author": "sirionis",
-  "license": "ISC",
+  "license": "MIT",
   "contributes": {
     "commands": [
       {

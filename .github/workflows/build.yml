@@ -11,12 +11,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+        contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0  # Ensure we fetch all history so we can find the branch name
+
 
       - name: Setup Node.js
         uses: actions/setup-node@v2

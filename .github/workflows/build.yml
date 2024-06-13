@@ -58,6 +58,7 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          echo "${{ steps.get_branch.outputs.branch }}" >> $GITHUB_OUTPUT
           git checkout ${{ steps.get_branch.outputs.branch }}
           git commit -am "ci: bump version to ${{ steps.get_version.outputs.VERSION }}"
           git push

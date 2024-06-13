@@ -100,17 +100,38 @@ function getKindFromString(kindString: string): vscode.CompletionItemKind {
     }
 }
 
-function AppendCodeBlock(element, hoverContents)
-{
+function AppendCodeBlock(element, hoverContents) {
+    // Получаем строки с аргументами для каждого перегруженного варианта
+    const argsVariants = element.args.map((argsArray: Array<{ name: string, type?: string }>) => {
+        return argsArray.map(arg => {
+            // Если тип задан, создаем ссылку на его имплементацию
+            if (arg.type) {
+                return `${arg.name}: [${arg.type}](command:editor.action.goToImplementation)`;
+            }
+            // Если тип не задан, просто возвращаем имя аргумента
+            return `${arg.name}`;
+        }).join(', ');
+    });
+
+    // Получаем строку с возвращаемым типом, добавляя ссылку на его имплементацию
+    let returnTypeString = 'any';
+    if (element.return_type) {
+        returnTypeString = element.return_type.replace(/(\w+)/g, `[$1](command:editor.action.goToImplementation)`);
+    }
+
+    // Создаем блок кода в зависимости от типа элемента
     switch (getKindFromString(element.kind)) {
         case vscode.CompletionItemKind.Function:
-            hoverContents.appendCodeblock(`function ${element.code}`, 'typescript');
+            // Для каждой перегрузки создаем отдельный блок кода
+            argsVariants.forEach(argsString => {
+                hoverContents.appendCodeblock(`function ${element.label}(${argsString}): ${returnTypeString}`, 'typescript');
+            });
             break;
         case vscode.CompletionItemKind.Variable:
-            hoverContents.appendCodeblock(`${element.code}`, 'typescript');
+            hoverContents.appendCodeblock(`${element.label}: ${returnTypeString}`, 'typescript');
             break;
         case vscode.CompletionItemKind.Class:
-            hoverContents.appendCodeblock(`class ${element.code}`, 'typescript');
+            hoverContents.appendCodeblock(`class ${element.label}`, 'typescript');
             break;
     }
 }
@@ -129,11 +150,9 @@ class MyHoverProvider implements vscode.HoverProvider {
             hoverContents.appendMarkdown(`### ${element.label}\n`);
             AppendCodeBlock(element, hoverContents);
 
-            // if (element.detail) {
-            //     hoverContents.appendMarkdown(`**Detail:** ${element.detail}\n`);
-            // }
-            if (element.documentation) {
-                hoverContents.appendMarkdown(`**Description:** ${element.documentation}\n`);
+
+            if (element.description) {
+                hoverContents.appendMarkdown(`**Description:** ${element.description}\n`);
             }
             if (element.insertText) {
                 hoverContents.appendMarkdown(`**Insert Text:** \`${element.insertText}\`\n`);
@@ -157,12 +176,13 @@ class DynamicCompletionItemProvider implements vscode.CompletionItemProvider {
             if (element && typeof element === 'object' && !Array.isArray(element) && element.kind) {
                 const kind = getKindFromString(element.kind);
                 const item = new vscode.CompletionItem(element.label, kind);
-                item.detail = element.detail || 'Function defined in V8 context';
-                item.insertText = new vscode.SnippetString(element.insertText);
+                item.detail = element.short_desc || 'Function defined in V8 context';
+                item.insertText = new vscode.SnippetString(element.insertText || element.label);
+                item.filterText = element.label;
 
                 let markdownDocumentation = new vscode.MarkdownString();
-                if (element.documentation) {
-                    markdownDocumentation.appendMarkdown(element.documentation);
+                if (element.description) {
+                    markdownDocumentation.appendMarkdown(element.description);
                 }
                 if (element.example) {
                     markdownDocumentation.appendCodeblock(element.example, "javascript");
@@ -177,12 +197,6 @@ class DynamicCompletionItemProvider implements vscode.CompletionItemProvider {
     }
 
     provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
-        const word = document.getText(document.getWordRangeAtPosition(position));
-        this.completionItems.forEach(item => {
-            if (item.label === word && item.kind === vscode.CompletionItemKind.Function) {
-                item.detail = `function ${word}(args: any): any`; // Пример сигнатуры
-            }
-        });
         return this.completionItems;
     }
 }

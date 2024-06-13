@@ -61,7 +61,7 @@ jobs:
           echo "branch=${{ steps.get_branch.outputs.branch }}" >> "$GITHUB_OUTPUT"
           git checkout ${{ steps.get_branch.outputs.branch }}
           git commit -am "ci: bump version to ${{ steps.get_version.outputs.VERSION }}"
-          git push
+          git push origin HEAD:${{ steps.get_branch.outputs.branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

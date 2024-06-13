@@ -61,10 +61,10 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          echo "branch=${{ steps.get_branch.outputs.branch }}" >> "$GITHUB_OUTPUT"
-          git checkout ${{ steps.get_branch.outputs.branch }}
-          git commit -am "ci: bump version to ${{ steps.get_version.outputs.VERSION }}"
-          git push origin HEAD:${{ steps.get_branch.outputs.branch }}
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
+          git checkout "${GITHUB_REF:11}"
+          git commit -am "Automated report"
+          git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

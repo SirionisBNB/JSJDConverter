@@ -1,0 +1,100 @@
+name: Build and Package VSCode Extension
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Bump version
+      run: npm run bump-version
+
+    - name: Compile TypeScript
+      run: npm run compile
+
+    - name: Install vsce
+      run: npm install -g vsce
+
+    - name: Package VS Code extension
+      run: |
+        mkdir -p vsix
+        vsce package --out ./vsix
+      # Uncomment below line and set it in GitHub Secrets if you plan to publish to VS Marketplace
+      # env:
+      #   VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+    - name: Install jq
+      run: sudo apt-get install jq
+
+    - name: Get package version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(cat package.json | jq -r .version)"
+
+    - name: Commit and push version bump
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git commit -am "ci: bump version to ${{ steps.get_version.outputs.VERSION }}"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Archive VSIX for release
+      uses: actions/upload-artifact@v2
+      with:
+        name: vsix-archive
+        path: vsix/*.vsix
+
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download VSIX Artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: vsix-archive
+        path: ./vsix
+
+    - name: Get package version
+      id: pkgver
+      run: echo "::set-output name=VERSION::$(cat package.json | jq -r .version)"
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.pkgver.outputs.VERSION }}
+        release_name: Release ${{ steps.pkgver.outputs.VERSION }}
+        draft: false
+        prerelease: false
+
+    - name: Upload VSIX to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./vsix/*.vsix
+        asset_name: my-vscode-extension.vsix
+        asset_content_type: application/octet-stream

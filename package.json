@@ -1,7 +1,7 @@
 {
   "displayName": "JSJDConverter",
   "name": "jsjdconverter",
-  "version": "1.0.3",
+  "version": "1.0.1",
   "description": "JSDoc converter for javascript",
   "repository": {
     "type": "git",

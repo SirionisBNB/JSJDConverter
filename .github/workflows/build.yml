@@ -53,14 +53,13 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          echo "branch=$current_branch" >> $GITHUB_OUTPUT
           git checkout $current_branch
           git commit -am "ci: bump version to $version
           git push origin HEAD:$current_branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          current_branch: $(git rev-parse --abbrev-ref HEAD)
-          version: $(cat package.json | jq -r .version)
+          current_branch: git rev-parse --abbrev-ref HEAD
+          version: cat package.json | jq -r .version
 
       - name: Archive VSIX for release
         uses: actions/upload-artifact@v2

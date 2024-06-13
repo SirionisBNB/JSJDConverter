@@ -106,7 +106,8 @@ function AppendCodeBlock(element, hoverContents) {
         return argsArray.map(arg => {
             // Если тип задан, создаем ссылку на его имплементацию
             if (arg.type) {
-                return `${arg.name}: [${arg.type}](command:editor.action.goToImplementation)`;
+                // Создаем ссылку для перехода к определению
+                return `${arg.name}: ${arg.type}`;
             }
             // Если тип не задан, просто возвращаем имя аргумента
             return `${arg.name}`;
@@ -116,7 +117,7 @@ function AppendCodeBlock(element, hoverContents) {
     // Получаем строку с возвращаемым типом, добавляя ссылку на его имплементацию
     let returnTypeString = 'any';
     if (element.return_type) {
-        returnTypeString = element.return_type.replace(/(\w+)/g, `[$1](command:editor.action.goToImplementation)`);
+        returnTypeString = element.return_type.replace(/(\w+(\.\w+)?)/g, `${element.return_type}`);
     }
 
     // Создаем блок кода в зависимости от типа элемента

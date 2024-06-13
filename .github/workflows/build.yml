@@ -48,17 +48,17 @@ jobs:
 
       - name: Get package version
         id: get_version
-        run: echo "VERSION=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(cat package.json | jq -r .version)" >> "$GITHUB_OUTPUT"
 
       - name: Get current branch
         id: get_branch
-        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push version bump
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          echo "branch={{ steps.get_branch.outputs.branch }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ steps.get_branch.outputs.branch }}" >> "$GITHUB_OUTPUT"
           git checkout ${{ steps.get_branch.outputs.branch }}
           git commit -am "ci: bump version to ${{ steps.get_version.outputs.VERSION }}"
           git push

@@ -12,15 +12,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-        contents: write
+      contents: write
     outputs:
-        version: ${{ steps.pkgver.outputs.VERSION }}
+      version: ${{ steps.pkgver.outputs.version }}
+      version_with_timestamp: ${{ steps.bump_version.outputs.version_with_timestamp }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Ensure we fetch all history so we can find the branch name
-
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v2
@@ -31,7 +32,32 @@ jobs:
         run: npm install
 
       - name: Bump version
-        run: npm run bump-version
+        id: bump_version
+        run: |
+          major_version=$(jq -r ".version" package.json | cut -d. -f1)
+          minor_version=$(jq -r ".version" package.json | cut -d. -f2)
+          patch_version=$(jq -r ".version" package.json | cut -d. -f3)
+
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # Increment the minor version for main branch builds
+            minor_version=$((minor_version + 1))
+            patch_version=0
+          else
+            # Increment the patch version for pull requests
+            patch_version=$((patch_version + 1))
+          fi
+
+          new_version="${major_version}.${minor_version}.${patch_version}"
+          echo new_version=$new_version
+
+          # Update package.json with the new version
+          jq ".version=\"$new_version\"" package.json > tmp.json && mv tmp.json package.json
+          cat package.json
+
+          # Output the new version
+          echo "version_with_timestamp=${new_version}" >> $GITHUB_ENV
+          echo "version=${new_version}" >> $GITHUB_OUTPUT
+          echo "::set-output name=version_with_timestamp::$new_version"
 
       - name: Compile TypeScript
         run: npm run compile
@@ -43,13 +69,6 @@ jobs:
         run: |
           mkdir -p vsix
           vsce package --out ./vsix
-        # Uncomment below line and set it in GitHub Secrets if you plan to publish to VS Marketplace
-        # env:
-        #   VSCE_PAT: ${{ secrets.VSCE_PAT }}
-
-      - name: Get package version
-        id: pkgver
-        run: echo "VERSION=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
 
       - name: Install jq
         run: sudo apt-get install jq
@@ -60,13 +79,8 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Commit local changes
           git add package.json package-lock.json
-          git commit -m "ci: bump version to ${{ steps.pkgver.outputs.VERSION }}"
-
-          # Checkout the branch and push changes
-          git checkout ${{ github.head_ref }}
+          git commit -m "ci: bump version to ${{ env.version_with_timestamp }}"
           git push origin HEAD:${{ github.head_ref }}
 
       - name: List VSIX files
@@ -81,8 +95,10 @@ jobs:
   release:
     needs: [build]
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
     permissions:
       contents: write
+
     steps:
       - name: Download VSIX Artifact
         uses: actions/download-artifact@v2
@@ -103,7 +119,6 @@ jobs:
           release_name: Release ${{ needs.build.outputs.version }}
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload VSIX to Release
         uses: actions/upload-release-asset@v1
@@ -111,6 +126,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./vsix/jsjdconverter-${{ needs.build.outputs.version }}.vsix
+          asset_path: ./vsix/*.vsix
           asset_name: jsjdconverter-${{ needs.build.outputs.version }}.vsix
           asset_content_type: application/octet-stream

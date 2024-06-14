@@ -60,8 +60,13 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Commit local changes
+          git add package.json package-lock.json
+          git commit -m "ci: bump version to ${{ steps.pkgver.outputs.VERSION }}"
+
+          # Checkout the branch and push changes
           git checkout ${{ github.head_ref }}
-          git commit -am "ci: bump version to ${{ steps.pkgver.outputs.VERSION }}"
           git push origin HEAD:${{ github.head_ref }}
 
       - name: Archive VSIX for release

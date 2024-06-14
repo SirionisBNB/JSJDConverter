@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: write
-
+    outputs:
+        version: ${{ steps.pkgver.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -46,20 +47,22 @@ jobs:
         # env:
         #   VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
+      - name: Get package version
+        id: pkgver
+        run: echo "VERSION=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
+
       - name: Install jq
         run: sudo apt-get install jq
 
       - name: Commit and push version bump
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          current_branch: ${{ github.head_ref }}
-          version: echo "::set-output name=VERSION::$(cat package.json | jq -r .version)"
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout $current_branch
-          git commit -am "ci: bump version to $VERSION"
-          git push origin HEAD:$current_branch
+          git checkout ${{ github.head_ref }}
+          git commit -am "ci: bump version to ${{ steps.pkgver.outputs.VERSION }}"
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Archive VSIX for release
         uses: actions/upload-artifact@v2
@@ -78,18 +81,14 @@ jobs:
           name: vsix-archive
           path: ./vsix
 
-      - name: Get package version
-        id: pkgver
-        run: echo "VERSION=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.pkgver.outputs.VERSION }}
-          release_name: Release ${{ steps.pkgver.outputs.VERSION }}
+          tag_name: ${{ needs.build.outputs.version }}
+          release_name: Release ${{ needs.build.outputs.version }}
           draft: false
           prerelease: false
 

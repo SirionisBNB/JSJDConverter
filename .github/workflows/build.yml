@@ -16,7 +16,6 @@ jobs:
       contents: write
     outputs:
       version: ${{ steps.bump_version.outputs.version }}
-      version_with_timestamp: ${{ steps.bump_version.outputs.version_with_timestamp }}
 
     steps:
       - name: Checkout code
@@ -56,9 +55,8 @@ jobs:
           cat package.json
 
           # Output the new version
-          echo "version_with_timestamp=${new_version}" >> $GITHUB_ENV
+          echo "version=${new_version}" >> $GITHUB_ENV
           echo "version=${new_version}" >> $GITHUB_OUTPUT
-          echo "::set-output name=version_with_timestamp::$new_version"
           echo "::set-output name=version::$new_version"
 
       - name: Compile TypeScript
@@ -82,7 +80,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "ci: bump version to ${{ steps.bump_version.outputs.version_with_timestamp }}"
+          git commit -m "ci: bump version to ${{ steps.bump_version.outputs.version }}"
 
           # Checkout the branch and push changes only if it exists
           BRANCH_NAME=${{ github.head_ref }}
@@ -101,3 +99,9 @@ jobs:
         with:
           name: vsix-archive
           path: vsix/*.vsix
+
+      - name: Create Tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git tag v${{ steps.bump_version.outputs.version }}
+          git push origin v${{ steps.bump_version.outputs.version }}

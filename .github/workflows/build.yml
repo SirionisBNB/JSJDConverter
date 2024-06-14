@@ -78,7 +78,8 @@ jobs:
   release:
     needs: [build]
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
       - name: Download VSIX Artifact
         uses: actions/download-artifact@v2
@@ -92,19 +93,14 @@ jobs:
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.build.outputs.version }}
           release_name: Release ${{ needs.build.outputs.version }}
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload VSIX to Release
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./vsix/*.vsix

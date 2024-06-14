@@ -74,14 +74,19 @@ jobs:
         run: sudo apt-get install jq
 
       - name: Commit and push version bump
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "ci: bump version to ${{ env.version_with_timestamp }}"
-          git push origin HEAD:${{ github.head_ref }}
+          git commit -m "ci: bump version to ${{ steps.pkgver.outputs.version }} || true"
+
+          # Checkout the branch and push changes only if it exists
+          if [[ $(git ls-remote --heads origin ${{ github.head_ref }} | wc -l) -gt 0 ]]; then
+            git checkout ${{ github.head_ref }}
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "Branch ${{ github.head_ref }} does not exist. Skipping push."
+          fi
 
       - name: List VSIX files
         run: ls -alh vsix
@@ -95,9 +100,9 @@ jobs:
   release:
     needs: [build]
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
     permissions:
       contents: write
+    if: github.event.pull_request.merged == true
 
     steps:
       - name: Download VSIX Artifact
@@ -112,9 +117,8 @@ jobs:
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ needs.build.outputs.version }}
           release_name: Release ${{ needs.build.outputs.version }}
           draft: false

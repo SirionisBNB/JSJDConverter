@@ -16,6 +16,7 @@ jobs:
       contents: write
     outputs:
       version: ${{ steps.bump_version.outputs.version }}
+      version_with_timestamp: ${{ steps.bump_version.outputs.version_with_timestamp }}
 
     steps:
       - name: Checkout code
@@ -58,6 +59,7 @@ jobs:
           echo "version=${new_version}" >> $GITHUB_ENV
           echo "version=${new_version}" >> $GITHUB_OUTPUT
           echo "::set-output name=version::$new_version"
+          echo "::set-output name=version_with_timestamp::$new_version"
 
       - name: Compile TypeScript
         run: npm run compile
@@ -74,6 +76,7 @@ jobs:
         run: sudo apt-get install jq
 
       - name: Commit and push version bump
+        if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -81,15 +84,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
           git commit -m "ci: bump version to ${{ steps.bump_version.outputs.version }}"
-
-          # Checkout the branch and push changes only if it exists
-          BRANCH_NAME=${{ github.head_ref }}
-          if [[ $(git ls-remote --heads origin $BRANCH_NAME | wc -l) -gt 0 ]]; then
-            git checkout $BRANCH_NAME
-            git push origin $BRANCH_NAME
-          else
-            echo "Branch $BRANCH_NAME does not exist. Skipping push."
-          fi
+          git push origin HEAD:${{ github.ref }}
 
       - name: List VSIX files
         run: ls -alh vsix

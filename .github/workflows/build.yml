@@ -87,9 +87,6 @@ jobs:
           name: vsix-archive
           path: ./vsix
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -109,5 +106,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./vsix/*.vsix
-          asset_name: jsonjsdocconverter.vsix
+          asset_name: jsonjsdocconverter-${{ needs.build.outputs.version }}.vsix
           asset_content_type: application/octet-stream

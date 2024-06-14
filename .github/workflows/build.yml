@@ -69,6 +69,9 @@ jobs:
           git checkout ${{ github.head_ref }}
           git push origin HEAD:${{ github.head_ref }}
 
+      - name: List VSIX files
+        run: ls -alh vsix
+
       - name: Archive VSIX for release
         uses: actions/upload-artifact@v2
         with:
@@ -86,6 +89,9 @@ jobs:
         with:
           name: vsix-archive
           path: ./vsix
+
+      - name: List downloaded files
+        run: ls -alh ./vsix
 
       - name: Create GitHub Release
         id: create_release

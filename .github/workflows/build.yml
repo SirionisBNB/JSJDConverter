@@ -90,17 +90,19 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use the newly created secret
+          RELEASE_TOKEN: ${{ secrets.JJ_SECRET }}
         with:
           tag_name: ${{ needs.build.outputs.version }}
           release_name: Release ${{ needs.build.outputs.version }}
           draft: false
           prerelease: false
+          token: ${{ secrets.JJ_SECRET }}
 
       - name: Upload VSIX to Release
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.JJ_SECRET }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./vsix/*.vsix

@@ -54,7 +54,12 @@ jobs:
 
       - name: Get current branch
         id: get_branch
-        run: echo "branch_name=$(git symbolic-ref HEAD --short)" >> $GITHUB_ENV
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_ENV
+          else
+            echo "branch_name=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          fi
 
       - name: Commit and push version bump
         env:

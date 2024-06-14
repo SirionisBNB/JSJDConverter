@@ -58,7 +58,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git checkout $current_branch
-          git commit -am "ci: bump version to $VERSION
+          git commit -am "ci: bump version to $VERSION"
           git push origin HEAD:$current_branch
 
       - name: Archive VSIX for release

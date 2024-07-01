@@ -77,6 +77,27 @@ async function ensureConfigParams(config: any): Promise<boolean> {
     return true;
 }
 
+function analyzeDynamicProperties(document: vscode.TextDocument): Map<string, Set<string>> {
+    const dynamicProperties = new Map<string, Set<string>>();
+    const text = document.getText();
+
+    // Регулярное выражение для поиска присвоений свойств объектам (e.g., obj.prop = value)
+    const regex = /(\w+)\.(\w+)\s*=\s*[^;]+;/g;
+    let match;
+
+    while (match = regex.exec(text)) {
+        const objectName = match[1];
+        const propertyName = match[2];
+
+        if (!dynamicProperties.has(objectName)) {
+            dynamicProperties.set(objectName, new Set());
+        }
+        dynamicProperties.get(objectName).add(propertyName);
+    }
+
+    return dynamicProperties;
+}
+
 const hoverData = new Map<string, any>(); // создаем хранилище данных для hover
 
 // Логирование в отдельное окно
@@ -138,6 +159,12 @@ function AppendCodeBlock(element, hoverContents) {
 }
 
 class MyHoverProvider implements vscode.HoverProvider {
+    private dynamicProperties: Map<string, Set<string>> = new Map();
+
+    updateDynamicProperties(document: vscode.TextDocument) {
+        this.dynamicProperties = analyzeDynamicProperties(document);
+    }
+
     provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         const range = document.getWordRangeAtPosition(position);
         const word = document.getText(range);
@@ -162,14 +189,26 @@ class MyHoverProvider implements vscode.HoverProvider {
             return new vscode.Hover(hoverContents, range);
         }
 
+        // Проверка динамических свойств
+        for (const [objectName, properties] of this.dynamicProperties.entries()) {
+            if (properties.has(word)) {
+                const hoverContents = new vscode.MarkdownString();
+                hoverContents.appendMarkdown(`### ${word}\n`);
+                hoverContents.appendMarkdown(`**Type:** Dynamic Property\n`);
+                hoverContents.appendMarkdown(`Dynamically added property to the object ${objectName}.`);
+                return new vscode.Hover(hoverContents, range);
+            }
+        }
         return null;  // Возвращаем null для стандартных функций, чтобы они обрабатывались обычным образом
     }
 }
 
 class DynamicCompletionItemProvider implements vscode.CompletionItemProvider {
     private completionItems: vscode.CompletionItem[] = [];
+    private dynamicProperties: Map<string, Set<string>> = new Map();
 
-    updateCompletionItems(contextInfo: Record<string, any>) {
+
+    updateCompletionItems(contextInfo: Record<string, any>, document: vscode.TextDocument) {
         this.completionItems = [];
         hoverData.clear();  // очищаем хранилище перед заполнением новыми данными
 
@@ -194,6 +233,18 @@ class DynamicCompletionItemProvider implements vscode.CompletionItemProvider {
 
                 hoverData.set(element.label, element);
             }
+        }
+
+        this.dynamicProperties = analyzeDynamicProperties(document);
+        // Добавление динамических свойств в completionItems
+        for (const [objectName, properties] of this.dynamicProperties.entries()) {
+            properties.forEach(prop => {
+                const item = new vscode.CompletionItem(prop, vscode.CompletionItemKind.Property);
+                item.detail = `Dynamic property of ${objectName}`;
+                item.insertText = prop;
+                item.documentation = new vscode.MarkdownString(`Dynamically added property to the object ${objectName}.`);
+                this.completionItems.push(item);
+            });
         }
     }
 
@@ -252,30 +303,30 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(classDisposable);
 
     const completionProvider = new DynamicCompletionItemProvider();
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', completionProvider));
-    const updateIntelliSenseCommand = 'extension.updateIntelliSense';
+    const hoverProvider = new MyHoverProvider();
 
-    const updateIntelliSenseDisposable = vscode.commands.registerCommand(updateIntelliSenseCommand, async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('extension.updateIntelliSense', async () => {
         try {
             vscode.window.setStatusBarMessage('Updating IntelliSense...', 5000);
-            log('Updating IntelliSense...');
-
             const response = await axios.post(`${config.serverAddress}:${config.serverPort}/get_v8_context`, {
                 token: config.token,
                 who: config.who
             });
 
-            completionProvider.updateCompletionItems(response.data);
-            log('IntelliSense updated successfully!');
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+                completionProvider.updateCompletionItems(response.data, activeEditor.document);
+                hoverProvider.updateDynamicProperties(activeEditor.document);
+            }
         } catch (error) {
             const errorMessage = 'Failed to update IntelliSense: ' + error.message;
             vscode.window.showErrorMessage(errorMessage);
             log(errorMessage);
         }
-    });
+    }));
 
-    context.subscriptions.push(updateIntelliSenseDisposable);
-    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', new MyHoverProvider()));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', completionProvider));
+    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', hoverProvider));
 }
 
 export function deactivate() { }

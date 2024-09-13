@@ -3,6 +3,8 @@ import axios from 'axios';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
+import * as requests from './v8_meta'
+
 
 const writeFile = util.promisify(fs.writeFile);
 
@@ -271,8 +273,8 @@ export async function activate(context: vscode.ExtensionContext) {
         try {
             vscode.window.setStatusBarMessage('Updating IntelliSense...', 5000);
             log('Updating IntelliSense...');
-            const response = await getV8Context(config);
-            const metadataResponse = await getV8Metadata(config);
+            const response = await requests.getV8Context(config);
+            const metadataResponse = await requests.getV8Metadata(config);
 
             const activeEditor = vscode.window.activeTextEditor;
             if (activeEditor) {

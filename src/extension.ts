@@ -4,6 +4,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 
+import { loadConfig, ensureConfigParams } from './config';
+import { DynamicCompletionItemProvider } from './completion_provider';
+import { jsonToJSDoc, generateClassFromJSDoc } from './jsdoc_generator';
+import { MyHoverProvider } from './hover_provider';
+import { getV8Context, getV8Metadata } from './v8_meta';
+import { log } from './utils'
+
+
 const writeFile = util.promisify(fs.writeFile);
 
 async function loadConfig(): Promise<any> {
@@ -262,7 +270,33 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
     }
 
-    outputChannel.show(); // Показываем канал вывода
+    vscode.window.showInformationMessage('Extension activated!');
+
+    const completionProvider = new DynamicCompletionItemProvider();
+    const hoverProvider = new MyHoverProvider();
+
+    context.subscriptions.push(vscode.commands.registerCommand('extension.updateIntelliSense', async () => {
+        try {
+            vscode.window.setStatusBarMessage('Updating IntelliSense...', 5000);
+            log('Updating IntelliSense...');
+            const response = await getV8Context(config);
+            const metadataResponse = await getV8Metadata(config);
+
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+                completionProvider.updateCompletionItems(response.data, activeEditor.document);
+                hoverProvider.updateDynamicProperties(activeEditor.document);
+            }
+            log('IntelliSense updated successfully!');
+        } catch (error) {
+            const errorMessage = 'Failed to update IntelliSense: ' + error.message;
+            vscode.window.showErrorMessage(errorMessage);
+            log(errorMessage);
+        }
+    }));
+
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', completionProvider));
+    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', hoverProvider));
 
     const disposable = vscode.commands.registerCommand('extension.generateJSDoc', () => {
         const editor = vscode.window.activeTextEditor;
@@ -277,7 +311,6 @@ export async function activate(context: vscode.ExtensionContext) {
             } catch (err) {
                 const errorMessage = 'Cannot parse the JSON: ' + err;
                 vscode.window.showErrorMessage(errorMessage);
-                log(errorMessage);
             }
         }
     });
@@ -294,7 +327,6 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
                 const errorMessage = 'Cannot generate class from JSDoc. Please ensure the JSDoc is well-formed.';
                 vscode.window.showErrorMessage(errorMessage);
-                log(errorMessage);
             }
         }
     });

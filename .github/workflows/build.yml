@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
@@ -90,7 +90,7 @@ jobs:
         run: ls -alh vsix
 
       - name: Archive VSIX for release
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: vsix-archive
           path: vsix/*.vsix

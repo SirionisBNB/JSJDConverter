@@ -4,14 +4,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 
-import { loadConfig, ensureConfigParams } from './config';
-import { DynamicCompletionItemProvider } from './completion_provider';
-import { jsonToJSDoc, generateClassFromJSDoc } from './jsdoc_generator';
-import { MyHoverProvider } from './hover_provider';
-import { getV8Context, getV8Metadata } from './v8_meta';
-import { log } from './utils'
-
-
 const writeFile = util.promisify(fs.writeFile);
 
 async function loadConfig(): Promise<any> {

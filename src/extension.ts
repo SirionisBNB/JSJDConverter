@@ -325,32 +325,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(disposable);
     context.subscriptions.push(classDisposable);
-
-    const completionProvider = new DynamicCompletionItemProvider();
-    const hoverProvider = new MyHoverProvider();
-
-    context.subscriptions.push(vscode.commands.registerCommand('extension.updateIntelliSense', async () => {
-        try {
-            vscode.window.setStatusBarMessage('Updating IntelliSense...', 5000);
-            const response = await axios.post(`${config.serverAddress}:${config.serverPort}/get_v8_context`, {
-                token: config.token,
-                who: config.who
-            });
-
-            const activeEditor = vscode.window.activeTextEditor;
-            if (activeEditor) {
-                completionProvider.updateCompletionItems(response.data, activeEditor.document);
-                hoverProvider.updateDynamicProperties(activeEditor.document);
-            }
-        } catch (error) {
-            const errorMessage = 'Failed to update IntelliSense: ' + error.message;
-            vscode.window.showErrorMessage(errorMessage);
-            log(errorMessage);
-        }
-    }));
-
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', completionProvider));
-    context.subscriptions.push(vscode.languages.registerHoverProvider('javascript', hoverProvider));
 }
 
 export function deactivate() { }
